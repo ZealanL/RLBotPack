@@ -1,0 +1,5 @@
+# Include everything the framework requires
+# You will automatically get updates for all versions starting with "1.".
+rlbot==1.*
+numpy
+torch

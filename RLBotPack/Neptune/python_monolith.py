@@ -1,17 +1,16 @@
 import time
 import socket
 import struct
-import subprocess
 import locker
+import ctypes
+from threading import Thread
+from ctypes import *
 
 import os
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
-print("====================================")
-print("====================================")
-print("====================================")
-print(os.getcwd())
+
 import collision_mesh_downloader
 
 UDP_IP = "127.0.0.1"
@@ -66,7 +65,9 @@ class DiscreteFF(nn.Module):
 		
 ##########################################
 
+exe_thread = None
 def start_bot_exe():
+	global exe_thread
 	print("Starting bot exe...")
 	
 	if not os.path.exists("./collision_meshes"):
@@ -74,12 +75,13 @@ def start_bot_exe():
 			collision_mesh_downloader.run()
 	
 	dir_path = os.path.dirname(os.path.realpath(__file__))
-	os.startfile(os.path.join(dir_path, "NeptuneRLGymCPP.exe"))
+	lib = cdll.LoadLibrary(os.path.join(dir_path, "NeptuneRLGymCPP.dll"))
+	exe_thread = Thread(target=getattr(lib, "?main_run@@YAHXZ"))
+	exe_thread.start()
+
+start_bot_exe()
 
 ##########################################
-
-total_infers = 0
-avg_infer_time = None
 
 @torch.no_grad()
 def run_inference_sockets():
@@ -112,19 +114,6 @@ def run_inference_sockets():
 		
 		data_out = struct.pack("ii", idx, action)
 		sock_out.sendto(data_out, (UDP_IP, UDP_SEND_PORT))
-			
-		infer_time = time.time() - start_time
-		if avg_infer_time is None:
-			avg_infer_time = infer_time
-		else:
-			decay = 0.97
-			avg_infer_time = avg_infer_time*decay + infer_time*(1-decay)
-			
-		print_interval = 30
-		if total_infers % print_interval == (print_interval - 1):
-			print("Average inference time: {}ms".format(avg_infer_time * 1000))
-			
-		total_infers += 1
 		
 ####################################################
 
